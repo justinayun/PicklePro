@@ -805,7 +805,7 @@ const App = (() => {
         <p>Generate a Practice Plan or get Drill Recommendations first, then come back to log your session.</p>
         <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
           <button class="btn btn-primary" onclick="App.navigate('plan')" style="min-width:200px">Create a Plan</button>
-          <button class="btn" onclick="App.navigate('drills')" style="min-width:200px;border:2px solid var(--border);background:none;color:var(--dark)">Get Drills</button>
+          <button class="btn" onclick="App.navigate('drills')" style="min-width:200px;border:1.5px solid var(--border-strong);background:none;color:var(--text)">Get Drills</button>
         </div>
       </div>`;
     }
@@ -900,7 +900,7 @@ const App = (() => {
 
     const items = sessions.map(s => {
       const pct  = s.totalCount > 0 ? Math.round((s.completedCount / s.totalCount) * 100) : 0;
-      const tBg  = s.tier === 'beginner' ? '#3B82F6' : s.tier === 'intermediate' ? '#F59E0B' : '#EF4444';
+      const tBg  = s.tier === 'beginner' ? '#2563EB' : s.tier === 'intermediate' ? '#D97706' : '#DC2626';
       const tLbl = (TIERS[s.tier] || TIERS.beginner).label;
 
       const drillRows = s.drills.slice(0, 4).map(d =>
