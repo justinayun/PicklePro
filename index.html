@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PicklePro – Your Pickleball Coach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- SCREEN: Welcome -->
+  <div id="screen-welcome" class="screen active">
+    <div class="welcome-inner">
+      <div class="logo-lockup">
+        <div class="logo-ball">
+          <svg width="96" height="96" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="#C8F135"/>
+            <ellipse cx="22" cy="19" rx="10" ry="8" fill="white" opacity="0.1"/>
+            <circle cx="32" cy="32" r="30" fill="none" stroke="#9AB810" stroke-width="1.5"/>
+
+            <circle cx="21" cy="17" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="32" cy="11" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="43" cy="17" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="12" cy="33" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="32" cy="32" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="52" cy="31" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="21" cy="47" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="32" cy="53" r="3.4" fill="#0a1800" opacity="0.3"/>
+            <circle cx="43" cy="47" r="3.4" fill="#0a1800" opacity="0.3"/>
+          </svg>
+        </div>
+        <h1 class="logo-wordmark">Pickle<span>Pro</span></h1>
+      </div>
+      <p class="welcome-tagline">Your personalized pickleball coach</p>
+      <ul class="welcome-features">
+        <li><span class="feat-dot green"></span>Personalized Drills</li>
+        <li><span class="feat-dot yellow"></span>Practice Plans</li>
+        <li><span class="feat-dot blue"></span>Courts &amp; Coaches Nationwide</li>
+      </ul>
+      <div class="welcome-actions">
+        <button class="btn btn-primary btn-xl" id="btn-start" onclick="App.startOnboarding()">Get Started</button>
+        <button class="btn btn-outline-white btn-xl" id="btn-continue" onclick="App.loadExisting()" style="display:none">Continue Training</button>
+        <button class="btn btn-ghost-white" id="btn-new-profile" onclick="App.showPathSelect()" style="display:none">Start Over</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Path Select -->
+  <div id="screen-path-select" class="screen">
+    <div class="screen-wrap">
+      <div class="screen-hd">
+        <h2 class="screen-title">Set Up Your Profile</h2>
+        <p class="screen-sub">Choose how you'd like us to assess your level.</p>
+      </div>
+      <div class="path-list">
+        <button class="path-card" onclick="App.choosePath('dupr')">
+          <div class="path-card-row">
+            <span class="path-icon">🏆</span>
+            <div class="path-text">
+              <h3>Enter DUPR Rating</h3>
+              <p>Know your official rating? Get precise drill recommendations right away.</p>
+            </div>
+          </div>
+          <span class="path-chip">2.0 – 8.0 scale</span>
+        </button>
+        <div class="path-or"><span>or</span></div>
+        <button class="path-card" onclick="App.choosePath('quiz')">
+          <div class="path-card-row">
+            <span class="path-icon">📋</span>
+            <div class="path-text">
+              <h3>Take the Skill Quiz</h3>
+              <p>Answer 5 quick questions and we'll figure out your skill tier.</p>
+            </div>
+          </div>
+          <span class="path-chip">5 questions · ~2 min</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: DUPR Input -->
+  <div id="screen-dupr" class="screen">
+    <div class="screen-wrap">
+      <div class="screen-hd">
+        <button class="btn-back" onclick="App.showPathSelect()">← Back</button>
+        <h2 class="screen-title">Your DUPR Rating</h2>
+        <p class="screen-sub">Enter your Dynamic Universal Pickleball Rating (2.0–8.0)</p>
+      </div>
+
+      <div class="tier-ruler">
+        <div class="ruler-segment beginner-bg">
+          <span class="ruler-name">Beginner</span>
+          <span class="ruler-range">2.0 – 3.0</span>
+        </div>
+        <div class="ruler-segment intermediate-bg">
+          <span class="ruler-name">Intermediate</span>
+          <span class="ruler-range">3.0 – 4.5</span>
+        </div>
+        <div class="ruler-segment advanced-bg">
+          <span class="ruler-name">Advanced</span>
+          <span class="ruler-range">4.5 – 8.0</span>
+        </div>
+      </div>
+
+      <div class="dupr-wrap">
+        <input type="number" id="dupr-input" class="dupr-input"
+               min="2.0" max="8.0" step="0.1" placeholder="3.5"
+               oninput="App.onDuprInput(this)">
+        <p class="dupr-hint" id="dupr-hint">&nbsp;</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">What's your biggest weakness on court?</label>
+        <div class="chip-row" id="dupr-chips">
+          <button class="chip" data-v="dinking"         onclick="App.pickChip(this,'dupr-chips')">Dinking</button>
+          <button class="chip" data-v="serving"         onclick="App.pickChip(this,'dupr-chips')">Serving</button>
+          <button class="chip" data-v="third-shot-drop" onclick="App.pickChip(this,'dupr-chips')">Third Shot Drop</button>
+          <button class="chip" data-v="volleying"       onclick="App.pickChip(this,'dupr-chips')">Volleying</button>
+          <button class="chip" data-v="footwork"        onclick="App.pickChip(this,'dupr-chips')">Footwork</button>
+          <button class="chip" data-v="strategy"        onclick="App.pickChip(this,'dupr-chips')">Strategy</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-xl btn-full" id="dupr-submit" onclick="App.submitDupr()" disabled>
+        Build My Profile →
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Quiz -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-top">
+      <button class="btn-back" onclick="App.quizBack()">← Back</button>
+      <div class="quiz-progress">
+        <div class="qprog-bar"><div class="qprog-fill" id="qprog-fill"></div></div>
+        <span class="qprog-label" id="qprog-label">Question 1 of 5</span>
+      </div>
+    </div>
+    <div class="quiz-body">
+      <div id="quiz-q-slot"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Result -->
+  <div id="screen-result" class="screen">
+    <div class="screen-wrap result-wrap">
+      <div class="result-hero" id="result-hero">
+        <div class="result-emoji" id="result-emoji">🌱</div>
+        <h2 class="result-tier" id="result-tier">Beginner</h2>
+        <p class="result-range" id="result-range">Rating: 2.0 – 3.0</p>
+      </div>
+      <div class="result-stats-card">
+        <h4 class="stats-card-title">Your Profile</h4>
+        <div class="stat-row"><span class="stat-label">Skill Tier</span><span class="stat-val" id="stat-tier">—</span></div>
+        <div class="stat-row"><span class="stat-label">Focus Area</span><span class="stat-val" id="stat-focus">—</span></div>
+        <div class="stat-row"><span class="stat-label">Rating Range</span><span class="stat-val" id="stat-rating">—</span></div>
+      </div>
+      <p class="result-desc" id="result-desc"></p>
+      <button class="btn btn-primary btn-xl btn-full" onclick="App.enterApp()">Start Training →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Home Dashboard -->
+  <div id="screen-home" class="screen">
+    <header class="app-bar">
+      <div class="app-bar-brand">
+        <svg width="26" height="26" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill="#C8F135"/>
+          <circle cx="32" cy="32" r="30" fill="none" stroke="#9AB810" stroke-width="1.5"/>
+
+          <circle cx="21" cy="17" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="32" cy="11" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="43" cy="17" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="12" cy="33" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="32" cy="32" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="52" cy="31" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="21" cy="47" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="32" cy="53" r="3.4" fill="#0a1800" opacity="0.3"/>
+          <circle cx="43" cy="47" r="3.4" fill="#0a1800" opacity="0.3"/>
+        </svg>
+        PicklePro
+      </div>
+      <button class="app-bar-btn" onclick="App.showSettings()" aria-label="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </header>
+
+    <div class="home-scroll">
+      <div class="home-greeting">
+        <div>
+          <p class="greeting-eyebrow">Ready to improve?</p>
+          <h2 class="greeting-title">Let's get to work.</h2>
+        </div>
+        <div class="tier-pill" id="home-tier-pill">
+          <span id="home-tier-icon">🌱</span>
+          <span id="home-tier-label">Beginner</span>
+        </div>
+      </div>
+
+      <p class="section-label">Features</p>
+      <div class="feature-grid">
+
+        <div class="feat-card feat-available" onclick="App.navigate('drills')">
+          <span class="feat-icon">🎯</span>
+          <div class="feat-body">
+            <h3>Drill Recommendations</h3>
+            <p>Personalized for your level &amp; weak spots</p>
+          </div>
+          <span class="feat-badge available">Available</span>
+        </div>
+
+        <div class="feat-card feat-available" onclick="App.navigate('plan')">
+          <span class="feat-icon">📅</span>
+          <div class="feat-body">
+            <h3>Practice Plans</h3>
+            <p>15, 30 &amp; 60-min structured sessions</p>
+          </div>
+          <span class="feat-badge available">Available</span>
+        </div>
+
+        <div class="feat-card feat-available" onclick="App.navigate('track')">
+          <span class="feat-icon">✅</span>
+          <div class="feat-body">
+            <h3>Session Tracker</h3>
+            <p>Log completed drills &amp; view history</p>
+          </div>
+          <span class="feat-badge available">Available</span>
+        </div>
+
+        <div class="feat-card feat-available" onclick="App.navigate('find')">
+          <span class="feat-icon">📍</span>
+          <div class="feat-body">
+            <h3>Facility Finder</h3>
+            <p>Courts, clubs &amp; coaches nationwide</p>
+          </div>
+          <span class="feat-badge available">Available</span>
+        </div>
+
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" onclick="App.navigate('home')">
+        <span class="bnav-icon">🏠</span><span class="bnav-lbl">Home</span>
+      </button>
+      <button class="bnav-btn" onclick="App.navigate('drills')">
+        <span class="bnav-icon">🎯</span><span class="bnav-lbl">Drills</span>
+      </button>
+      <button class="bnav-btn" onclick="App.navigate('plan')">
+        <span class="bnav-icon">📅</span><span class="bnav-lbl">Plan</span>
+      </button>
+      <button class="bnav-btn" onclick="App.navigate('track')">
+        <span class="bnav-icon">✅</span><span class="bnav-lbl">Track</span>
+      </button>
+      <button class="bnav-btn" onclick="App.navigate('find')">
+        <span class="bnav-icon">📍</span><span class="bnav-lbl">Find</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- SCREEN: Facility Finder -->
+  <div id="screen-find" class="screen">
+    <header class="app-bar">
+      <button class="app-bar-back-btn" onclick="App.navigate('home')" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="app-bar-title">Facility Finder</span>
+      <div class="app-bar-spacer"></div>
+    </header>
+
+    <div class="find-scroll">
+
+      <div class="find-search-wrap">
+        <div class="find-search-row">
+          <div class="find-search-box">
+            <svg class="find-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="find-input" class="find-input"
+                   placeholder="City, zip code, or facility name…"
+                   oninput="App.onFindSearch(this.value)"
+                   autocomplete="off">
+            <button class="find-clear hidden" id="find-clear" onclick="App.clearFind()" aria-label="Clear">✕</button>
+          </div>
+        </div>
+        <button class="filter-chip" id="coaching-chip" onclick="App.toggleCoachingFilter()">
+          🎓 Coaching Only
+        </button>
+      </div>
+
+      <div id="find-results">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCREEN: Session Tracker -->
+  <div id="screen-tracker" class="screen">
+    <header class="app-bar">
+      <button class="app-bar-back-btn" onclick="App.navigate('home')" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="app-bar-title">Session Tracker</span>
+      <div class="app-bar-spacer"></div>
+    </header>
+
+    <div class="tracker-tabs">
+      <button class="tracker-tab active" id="tab-active"  onclick="App.switchTrackerTab('active')">Active Session</button>
+      <button class="tracker-tab"        id="tab-history" onclick="App.switchTrackerTab('history')">History</button>
+    </div>
+
+    <div class="tracker-scroll" id="tracker-panel">
+      <!-- Rendered by JS -->
+    </div>
+
+    <div class="tracker-footer hidden" id="tracker-footer">
+      <button class="btn btn-primary btn-xl btn-full" onclick="App.endSession()">
+        ✓&nbsp; Complete Session
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Practice Plan -->
+  <div id="screen-plan" class="screen">
+    <header class="app-bar">
+      <button class="app-bar-back-btn" onclick="App.navigate('home')" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="app-bar-title">Practice Plan</span>
+      <div class="app-bar-spacer"></div>
+    </header>
+
+    <div class="plan-scroll">
+
+      <div class="time-selector">
+        <p class="time-prompt">How long do you have today?</p>
+        <div class="time-btn-row">
+          <button class="time-btn" data-min="15" onclick="App.selectPlanTime(15, this)">
+            <span class="time-num">15</span>
+            <span class="time-unit">MIN</span>
+          </button>
+          <button class="time-btn active" data-min="30" onclick="App.selectPlanTime(30, this)">
+            <span class="time-num">30</span>
+            <span class="time-unit">MIN</span>
+          </button>
+          <button class="time-btn" data-min="60" onclick="App.selectPlanTime(60, this)">
+            <span class="time-num">60</span>
+            <span class="time-unit">MIN</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="plan-output"></div>
+
+    </div>
+
+    <div class="plan-footer">
+      <button class="btn btn-primary btn-xl btn-full" onclick="App.regeneratePlan()">
+        ↻&nbsp; New Plan
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Drills -->
+  <div id="screen-drills" class="screen">
+    <header class="app-bar">
+      <button class="app-bar-back-btn" onclick="App.navigate('home')" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="app-bar-title">Drills For You</span>
+      <div class="app-bar-spacer"></div>
+    </header>
+
+    <div class="drills-scroll">
+      <div class="drills-meta" id="drills-meta"></div>
+      <div class="drills-list" id="drills-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="drills-footer">
+      <button class="btn btn-primary btn-xl btn-full" onclick="App.shuffleDrills()">
+        ↻&nbsp; Shuffle Drills
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings -->
+  <div id="modal-settings" class="modal-overlay hidden" onclick="App.closeSettings(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3 class="modal-title">Profile</h3>
+      <div class="modal-body">
+        <div id="settings-info" class="settings-info"></div>
+        <button class="btn btn-danger btn-full" onclick="App.confirmReset()">Reset Profile &amp; Start Over</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="drills.js"></script>
+  <script src="facilities.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
