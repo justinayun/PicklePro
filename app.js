@@ -19,7 +19,8 @@ const App = (() => {
     activeSession: null,
     trackerTab: 'active',
     findQuery: '',
-    coachingFilter: false
+    coachingFilter: false,
+    pendingSessionEntry: null
   };
 
   /* ---- Quiz Questions ---- */
@@ -51,9 +52,10 @@ const App = (() => {
     },
     {
       id: 'weakest',
-      text: "What's your biggest weakness?",
-      sub: "We'll focus your drill recommendations here.",
+      text: "What are your weaknesses?",
+      sub: "Select all that apply — we'll focus your drills here.",
       score: false,
+      multi: true,
       options: [
         { emoji: '🤝', title: 'Dinking',           desc: "Inconsistent at the kitchen",               val: 'dinking' },
         { emoji: '🎾', title: 'Serving',           desc: "Errors or poor placement",                  val: 'serving' },
@@ -152,6 +154,35 @@ const App = (() => {
         { name: 'Cool Down',    icon: '🧊', time: 2,  pool: null,      count: 0 }
       ]
     }
+  };
+
+  const RATINGS = [
+    { val: 1, emoji: '😫', label: 'Rough',       color: '#F87171' },
+    { val: 2, emoji: '😕', label: 'Tired',        color: '#FB923C' },
+    { val: 3, emoji: '😐', label: 'Okay',         color: '#FBBF24' },
+    { val: 4, emoji: '😊', label: 'Good',         color: '#A3E635' },
+    { val: 5, emoji: '🔥', label: 'Crushing it',  color: '#C8F135' },
+  ];
+
+  const WARMUP_ROUTINES = {
+    beginner: [
+      { name: 'Lateral Baseline Shuffle',    duration: 2, cue: 'Shuffle side to side along the baseline. Stay on the balls of your feet, paddle up.' },
+      { name: 'Straight-Ahead Dink Rally',   duration: 3, cue: 'Easy pace at the kitchen. Focus on feel and low contact — no attacking.' },
+      { name: 'Bounce-and-Dink Solo Feed',   duration: 3, cue: 'Self-feed a bounce, alternate forehand and backhand dinks. Soft grip throughout.' },
+      { name: 'Wrist & Shoulder Loosener',   duration: 2, cue: '10 slow wrist circles each direction, then arm circles forward and back. Shake it out.' },
+    ],
+    intermediate: [
+      { name: 'Dynamic Court Shuffle',        duration: 2, cue: 'Baseline to kitchen and back — stay low, quick steps, recover your split-step each time.' },
+      { name: 'Cross-Court Dink Warm-Up',     duration: 3, cue: 'Easy cross-court dinks with your partner. Groove the angle, no speed-ups.' },
+      { name: 'Mid-Court Drop Feed',          duration: 3, cue: 'Self-drop from mid-court, push a soft drop into the kitchen. 15 reps each side.' },
+      { name: 'Slow Volley Exchange',         duration: 2, cue: 'Half-speed volley rally at the kitchen. Compact swings, watch the ball off the paddle.' },
+    ],
+    advanced: [
+      { name: 'Explosive First-Step Drill',   duration: 2, cue: 'Partner taps paddle — explode one step in the direction they point. Pure reaction.' },
+      { name: 'Cross-Court Dink Groove',      duration: 2, cue: 'Kitchen line cross-court at 60% effort. Feel your angles and weight transfer, not power.' },
+      { name: 'Third Shot Drop Warm-Up',      duration: 3, cue: '15 drops each side from the baseline — smooth, not hard. Track every net clear.' },
+      { name: 'Reset Volley Exchange',        duration: 3, cue: 'One player feeds speed-ups, one resets. Switch every 5. Stay compact on resets.' },
+    ]
   };
 
   const COOLDOWN_NOTES = {
@@ -266,11 +297,12 @@ const App = (() => {
     if (isNaN(v) || v < 2.0 || v > 8.0 || !state.duprWeakSkill) return;
 
     state.profile = {
-      method:    'dupr',
-      dupr:      v,
-      tier:      ratingToTier(v),
-      weakSkill: state.duprWeakSkill,
-      createdAt: Date.now()
+      method:     'dupr',
+      dupr:       v,
+      tier:       ratingToTier(v),
+      weakSkills: [state.duprWeakSkill],
+      weakSkill:  state.duprWeakSkill,
+      createdAt:  Date.now()
     };
     saveProfile();
     renderResult();
@@ -289,26 +321,35 @@ const App = (() => {
     label.textContent = `Question ${state.quiz.step + 1} of ${QUESTIONS.length}`;
 
     const saved       = state.quiz.answers[q.id];
+    const isMulti     = !!q.multi;
     const isLast      = state.quiz.step === QUESTIONS.length - 1;
-    const btnDisabled = saved === undefined;
+    const btnDisabled = isMulti
+      ? !(Array.isArray(saved) && saved.length > 0)
+      : saved === undefined;
     const btnLabel    = isLast ? 'See My Results →' : 'Next →';
     const btnAction   = isLast ? 'App.quizSubmit()' : 'App.quizNext()';
+    const checkSvg    = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
     slot.innerHTML = `
       <div class="quiz-question">
         <h2 class="quiz-q-text">${q.text}</h2>
         <p class="quiz-q-sub">${q.sub}</p>
         <div class="quiz-options">
-          ${q.options.map((opt, oidx) => `
-            <button class="quiz-opt ${saved === opt.val ? 'chosen' : ''}"
-                    onclick="App.chooseOpt(${state.quiz.step}, ${oidx}, this)">
-              <span class="opt-emoji">${opt.emoji}</span>
-              <span>
-                <span class="opt-title">${opt.title}</span>
-                <span class="opt-desc">${opt.desc}</span>
-              </span>
-            </button>
-          `).join('')}
+          ${q.options.map((opt, oidx) => {
+            const isChosen = isMulti
+              ? (Array.isArray(saved) && saved.includes(opt.val))
+              : saved === opt.val;
+            return `
+              <button class="quiz-opt${isChosen ? ' chosen' : ''}${isMulti ? ' quiz-opt-multi' : ''}"
+                      onclick="App.chooseOpt(${state.quiz.step}, ${oidx}, this)">
+                <span class="opt-emoji">${opt.emoji}</span>
+                <span>
+                  <span class="opt-title">${opt.title}</span>
+                  <span class="opt-desc">${opt.desc}</span>
+                </span>
+                ${isMulti ? `<span class="opt-check${isChosen ? ' checked' : ''}">${isChosen ? checkSvg : ''}</span>` : ''}
+              </button>`;
+          }).join('')}
         </div>
         <div class="quiz-footer">
           <button class="btn btn-primary" id="quiz-next-btn"
@@ -322,14 +363,36 @@ const App = (() => {
   function chooseOpt(stepIdx, oidx, el) {
     const q   = QUESTIONS[stepIdx];
     const opt = q.options[oidx];
-    state.quiz.answers[q.id] = opt.val;
 
-    el.closest('.quiz-options').querySelectorAll('.quiz-opt')
-      .forEach(o => o.classList.remove('chosen'));
-    el.classList.add('chosen');
+    if (q.multi) {
+      let current = state.quiz.answers[q.id];
+      if (!Array.isArray(current)) current = [];
+      const exists = current.indexOf(opt.val);
+      if (exists >= 0) {
+        current = current.filter(v => v !== opt.val);
+      } else {
+        current = [...current, opt.val];
+      }
+      state.quiz.answers[q.id] = current;
 
-    const btn = document.getElementById('quiz-next-btn');
-    if (btn) btn.disabled = false;
+      const isChosen = current.includes(opt.val);
+      el.classList.toggle('chosen', isChosen);
+      const checkEl = el.querySelector('.opt-check');
+      if (checkEl) {
+        checkEl.classList.toggle('checked', isChosen);
+        const svg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        checkEl.innerHTML = isChosen ? svg : '';
+      }
+      const btn = document.getElementById('quiz-next-btn');
+      if (btn) btn.disabled = current.length === 0;
+    } else {
+      state.quiz.answers[q.id] = opt.val;
+      el.closest('.quiz-options').querySelectorAll('.quiz-opt')
+        .forEach(o => o.classList.remove('chosen'));
+      el.classList.add('chosen');
+      const btn = document.getElementById('quiz-next-btn');
+      if (btn) btn.disabled = false;
+    }
   }
 
   function quizNext() {
@@ -361,10 +424,14 @@ const App = (() => {
     else if (total <= 4) tier = 'intermediate';
     else                 tier = 'advanced';
 
+    const rawWeak    = state.quiz.answers['weakest'];
+    const weakSkills = Array.isArray(rawWeak) && rawWeak.length > 0 ? rawWeak : ['dinking'];
+
     state.profile = {
       method:      'quiz',
       tier:        tier,
-      weakSkill:   state.quiz.answers['weakest']   || 'dinking',
+      weakSkills:  weakSkills,
+      weakSkill:   weakSkills[0],
       strongSkill: state.quiz.answers['strongest'] || 'serving',
       struggle:    state.quiz.answers['struggle'],
       createdAt:   Date.now()
@@ -376,8 +443,9 @@ const App = (() => {
 
   /* ---- Result screen ---- */
   function renderResult() {
-    const t    = TIERS[state.profile.tier];
-    const weak = SKILL_LABELS[state.profile.weakSkill] || 'General';
+    const t          = TIERS[state.profile.tier];
+    const weakSkills = state.profile.weakSkills || [state.profile.weakSkill || 'dinking'];
+    const weak       = weakSkills.map(s => SKILL_LABELS[s] || s).join(', ') || 'General';
 
     document.getElementById('result-hero').className = `result-hero ${t.heroClass}`;
     document.getElementById('result-emoji').textContent = t.emoji;
@@ -443,6 +511,11 @@ const App = (() => {
      DRILL RECOMMENDATION ENGINE
      ============================================================ */
 
+  function drillYouTubeUrl(drill) {
+    const q = `pickleball ${drill.name}`.replace(/\s+/g, '+');
+    return `https://www.youtube.com/results?search_query=${q}`;
+  }
+
   function fisherYates(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -455,14 +528,14 @@ const App = (() => {
   function getRecommendedDrills(excludeIds = []) {
     if (!state.profile || typeof DRILL_LIBRARY === 'undefined') return [];
 
-    const tierDrills   = DRILL_LIBRARY.filter(d => d.tier === state.profile.tier && !excludeIds.includes(d.id));
-    const weakSkill    = state.profile.weakSkill;
+    const tierDrills = DRILL_LIBRARY.filter(d => d.tier === state.profile.tier && !excludeIds.includes(d.id));
+    const weakSkills = state.profile.weakSkills || [state.profile.weakSkill || 'dinking'];
 
-    const weakDrills   = fisherYates(tierDrills.filter(d => d.category === weakSkill));
-    const otherDrills  = fisherYates(tierDrills.filter(d => d.category !== weakSkill));
+    const weakDrills  = fisherYates(tierDrills.filter(d =>  weakSkills.includes(d.category)));
+    const otherDrills = fisherYates(tierDrills.filter(d => !weakSkills.includes(d.category)));
 
-    const numWeak      = Math.min(3, weakDrills.length);
-    const numOther     = Math.min(5 - numWeak, otherDrills.length);
+    const numWeak  = Math.min(3, weakDrills.length);
+    const numOther = Math.min(5 - numWeak, otherDrills.length);
 
     const chosen = [...weakDrills.slice(0, numWeak), ...otherDrills.slice(0, numOther)];
     return fisherYates(chosen);
@@ -478,9 +551,10 @@ const App = (() => {
     const drills = getRecommendedDrills();
     state.currentDrillIds = drills.map(d => d.id);
 
-    const tier     = TIERS[state.profile.tier];
-    const weakLbl  = SKILL_LABELS[state.profile.weakSkill] || 'your weak areas';
-    const meta     = document.getElementById('drills-meta');
+    const tier       = TIERS[state.profile.tier];
+    const weakSkills = state.profile.weakSkills || [state.profile.weakSkill || 'dinking'];
+    const weakLbl    = weakSkills.map(s => SKILL_LABELS[s] || s).join(' & ') || 'your weak areas';
+    const meta       = document.getElementById('drills-meta');
     if (meta) {
       meta.innerHTML = `Showing <strong>5 ${tier.label} drills</strong> focused on <strong>${weakLbl}</strong>. Tap Shuffle for a new set.`;
     }
@@ -492,7 +566,7 @@ const App = (() => {
     const list = document.getElementById('drills-list');
     if (!list) return;
 
-    const weakSkill = state.profile?.weakSkill;
+    const weakSkills = state.profile?.weakSkills || [state.profile?.weakSkill || 'dinking'];
 
     const CAT_LABELS = {
       dinking:          'Dinking',
@@ -506,7 +580,7 @@ const App = (() => {
     const DIFF_LABELS = { beginner: 'Easy', intermediate: 'Medium', advanced: 'Hard' };
 
     list.innerHTML = drills.map(d => {
-      const isFocus  = d.category === weakSkill;
+      const isFocus  = weakSkills.includes(d.category);
       const dots     = ['beginner','intermediate','advanced'].map((t, i) =>
         `<span class="diff-dot ${['beginner','intermediate','advanced'].indexOf(d.tier) >= i ? 'filled' : ''}"></span>`
       ).join('');
@@ -526,7 +600,7 @@ const App = (() => {
           </div>
           <h3 class="drill-name">${d.name}</h3>
           <p class="drill-desc">${d.description}</p>
-          <a class="yt-btn" href="${d.youtube}" target="_blank" rel="noopener noreferrer">
+          <a class="yt-btn" href="${drillYouTubeUrl(d)}" target="_blank" rel="noopener noreferrer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
             Watch Tutorial
           </a>
@@ -744,21 +818,61 @@ const App = (() => {
     const durationMin = Math.max(1, Math.round((Date.now() - session.startTime) / 60000));
     const done        = session.drills.filter(d => d.completed).length;
 
-    const entry = {
-      id:             Date.now(),
-      date:           new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      tier:           state.profile?.tier || 'beginner',
-      source:         session.source,
-      planMinutes:    session.planMinutes,
-      drills:         session.drills.map(d => ({ name: d.name, category: d.category, completed: d.completed })),
-      completedCount: done,
-      totalCount:     session.drills.length,
-      durationMinutes: durationMin
+    state.pendingSessionEntry = {
+      id:              Date.now(),
+      date:            new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      tier:            state.profile?.tier || 'beginner',
+      source:          session.source,
+      planMinutes:     session.planMinutes,
+      drills:          session.drills.map(d => ({ name: d.name, category: d.category, completed: d.completed })),
+      completedCount:  done,
+      totalCount:      session.drills.length,
+      durationMinutes: durationMin,
+      rating:          null
     };
-
-    saveHistory([entry, ...loadHistory()].slice(0, 5));
     state.activeSession = null;
-    state.trackerTab    = 'history';
+    showRatingPrompt();
+  }
+
+  function showRatingPrompt() {
+    const entry = state.pendingSessionEntry;
+    if (!entry) return;
+
+    const pct   = entry.totalCount > 0 ? Math.round((entry.completedCount / entry.totalCount) * 100) : 0;
+    const hdEmoji = pct === 100 ? '🎉' : pct >= 60 ? '✅' : '💪';
+
+    document.getElementById('rating-hd-emoji').textContent = hdEmoji;
+    document.getElementById('rating-hd-meta').textContent  =
+      `${entry.completedCount} of ${entry.totalCount} drills · ${entry.durationMinutes} min`;
+
+    document.getElementById('rating-btns').innerHTML = RATINGS.map(r => `
+      <button class="rating-btn" onclick="App.submitRating(${r.val})"
+              style="--rating-color:${r.color}">
+        <span class="rating-btn-emoji">${r.emoji}</span>
+        <span class="rating-btn-num">${r.val}</span>
+        <span class="rating-btn-label">${r.label}</span>
+      </button>`).join('');
+
+    document.getElementById('modal-rating').classList.remove('hidden');
+  }
+
+  function submitRating(rating) {
+    if (!state.pendingSessionEntry) return;
+    state.pendingSessionEntry.rating = rating;
+    _commitSession();
+  }
+
+  function skipRating() {
+    _commitSession();
+  }
+
+  function _commitSession() {
+    if (state.pendingSessionEntry) {
+      saveHistory([state.pendingSessionEntry, ...loadHistory()].slice(0, 5));
+      state.pendingSessionEntry = null;
+    }
+    document.getElementById('modal-rating').classList.add('hidden');
+    state.trackerTab = 'history';
     updateTrackerTabs();
     renderTrackerPanel();
   }
@@ -860,7 +974,7 @@ const App = (() => {
             ${drill.duration ? `<span class="check-dur">${drill.duration} min</span>` : ''}
           </div>
         </div>
-        <a class="check-yt" href="${drill.youtube}" target="_blank" rel="noopener noreferrer"
+        <a class="check-yt" href="${drillYouTubeUrl(drill)}" target="_blank" rel="noopener noreferrer"
            onclick="event.stopPropagation()" title="Watch Tutorial">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
         </a>
@@ -903,6 +1017,13 @@ const App = (() => {
       const tBg  = s.tier === 'beginner' ? '#2563EB' : s.tier === 'intermediate' ? '#D97706' : '#DC2626';
       const tLbl = (TIERS[s.tier] || TIERS.beginner).label;
 
+      const ratingData   = s.rating != null ? RATINGS[s.rating - 1] : null;
+      const ratingHtml   = ratingData
+        ? `<div class="hist-rating" style="color:${ratingData.color}">
+             ${ratingData.emoji} <span>${s.rating}/5</span>
+           </div>`
+        : '';
+
       const drillRows = s.drills.slice(0, 4).map(d =>
         `<div class="hist-drill-row ${d.completed ? 'done' : ''}">
           <span class="hist-drill-dot ${d.completed ? 'done' : ''}"></span>
@@ -921,7 +1042,10 @@ const App = (() => {
               ${s.planMinutes ? `<span style="font-size:12px;color:var(--muted);font-weight:600">${s.planMinutes}-min plan</span>` : ''}
             </div>
           </div>
-          <span class="hist-dur">${s.durationMinutes}m</span>
+          <div class="hist-right">
+            ${ratingHtml}
+            <span class="hist-dur">${s.durationMinutes}m</span>
+          </div>
         </div>
         <div class="hist-prog-wrap">
           <div class="hist-prog-bar"><div class="hist-prog-fill" style="width:${pct}%"></div></div>
@@ -931,14 +1055,45 @@ const App = (() => {
       </div>`;
     }).join('');
 
-    return `<div class="history-list">${items}</div><div style="height:8px"></div>`;
+    return buildTrendHtml(sessions) +
+           `<div class="history-list">${items}</div><div style="height:8px"></div>`;
+  }
+
+  function buildTrendHtml(sessions) {
+    const rated = sessions.filter(s => s.rating != null);
+    if (rated.length < 2) return '';
+
+    const recent = rated.slice(0, 5);
+    const avg    = (recent.reduce((sum, s) => sum + s.rating, 0) / recent.length).toFixed(1);
+    const newest = recent[0].rating;
+    const oldest = recent[recent.length - 1].rating;
+    const diff   = newest - oldest;
+
+    let trendIcon, trendText, trendColor;
+    if (diff >= 1)      { trendIcon = '↑'; trendText = 'Improving'; trendColor = '#C8F135'; }
+    else if (diff <= -1){ trendIcon = '↓'; trendText = 'Declining';  trendColor = '#F87171'; }
+    else                { trendIcon = '→'; trendText = 'Steady';     trendColor = 'rgba(220,233,255,0.4)'; }
+
+    const bars = [...recent].reverse().map(s => {
+      const clr = s.rating >= 4 ? '#C8F135' : s.rating === 3 ? '#FBBF24' : '#F87171';
+      const h   = 6 + Math.round((s.rating / 5) * 28);
+      return `<div class="trend-bar" style="height:${h}px;background:${clr}" title="${RATINGS[s.rating-1].label}"></div>`;
+    }).join('');
+
+    return `<div class="trend-card">
+      <div>
+        <div class="trend-card-label">Progress Trend</div>
+        <div class="trend-card-stat" style="color:${trendColor}">${trendIcon} ${trendText} · avg ${avg}/5</div>
+      </div>
+      <div class="trend-bars">${bars}</div>
+    </div>`;
   }
 
   /* ============================================================
      PRACTICE PLAN ENGINE
      ============================================================ */
 
-  function getPlanPool(pool, weakSkill) {
+  function getPlanPool(pool, weakSkills) {
     const tier = state.profile.tier;
     if (!DRILL_LIBRARY) return [];
 
@@ -954,10 +1109,10 @@ const App = (() => {
         );
       }
       case 'weak':
-        return fisherYates(DRILL_LIBRARY.filter(d => d.tier === tier && d.category === weakSkill));
+        return fisherYates(DRILL_LIBRARY.filter(d => d.tier === tier && weakSkills.includes(d.category)));
       case 'general':
         return fisherYates(
-          DRILL_LIBRARY.filter(d => d.tier === tier && d.category !== weakSkill && d.category !== 'footwork')
+          DRILL_LIBRARY.filter(d => d.tier === tier && !weakSkills.includes(d.category) && d.category !== 'footwork')
         );
       case 'game':
         return fisherYates(DRILL_LIBRARY.filter(d => d.tier === tier && d.category === 'strategy'));
@@ -966,10 +1121,10 @@ const App = (() => {
     }
   }
 
-  function buildPlanSection(cfg, usedIds, weakSkill) {
+  function buildPlanSection(cfg, usedIds, weakSkills) {
     if (!cfg.pool || cfg.count === 0) return { ...cfg, drills: [] };
 
-    let pool = getPlanPool(cfg.pool, weakSkill).filter(d => !usedIds.has(d.id));
+    let pool = getPlanPool(cfg.pool, weakSkills).filter(d => !usedIds.has(d.id));
 
     if (pool.length < cfg.count) {
       const fill = fisherYates(
@@ -994,13 +1149,13 @@ const App = (() => {
   }
 
   function generatePlan(minutes) {
-    const cfg       = PLAN_CONFIGS[minutes];
-    const weakSkill = state.profile?.weakSkill || 'dinking';
-    const usedIds   = new Set();
+    const cfg        = PLAN_CONFIGS[minutes];
+    const weakSkills = state.profile?.weakSkills || [state.profile?.weakSkill || 'dinking'];
+    const usedIds    = new Set();
     return {
       minutes,
       label: cfg.label,
-      sections: cfg.sections.map(s => buildPlanSection(s, usedIds, weakSkill))
+      sections: cfg.sections.map(s => buildPlanSection(s, usedIds, weakSkills))
     };
   }
 
@@ -1020,10 +1175,11 @@ const App = (() => {
     const output = document.getElementById('plan-output');
     if (!plan || !output) return;
 
-    const tier   = state.profile.tier;
-    const t      = TIERS[tier];
-    const weak   = SKILL_LABELS[state.profile.weakSkill] || 'General';
-    const total  = plan.sections.reduce((n, s) => n + s.drills.length, 0);
+    const tier       = state.profile.tier;
+    const t          = TIERS[tier];
+    const weakSkills = state.profile.weakSkills || [state.profile.weakSkill || 'dinking'];
+    const weak       = weakSkills.map(s => SKILL_LABELS[s] || s).join(' & ') || 'General';
+    const total      = plan.sections.reduce((n, s) => n + s.drills.length, 0);
 
     const CAT = {
       dinking: 'Dinking', serving: 'Serving',
@@ -1052,7 +1208,7 @@ const App = (() => {
                 </div>
                 <div class="plan-item-right">
                   <span class="plan-item-time">${drill.allocatedTime} min</span>
-                  <a class="plan-item-yt" href="${drill.youtube}" target="_blank" rel="noopener noreferrer" title="Watch Tutorial">
+                  <a class="plan-item-yt" href="${drillYouTubeUrl(drill)}" target="_blank" rel="noopener noreferrer" title="Watch Tutorial">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
                   </a>
                 </div>
@@ -1114,15 +1270,53 @@ const App = (() => {
     if (list) { list.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   }
 
+  /* ---- Warm-Up modal ---- */
+  function showWarmup() {
+    if (!state.profile) return;
+    const tier       = state.profile.tier;
+    const activities = WARMUP_ROUTINES[tier] || WARMUP_ROUTINES.beginner;
+    const total      = activities.reduce((s, a) => s + a.duration, 0);
+    const t          = TIERS[tier];
+
+    const rows = activities.map((a, i) => `
+      <div class="warmup-item">
+        <div class="warmup-item-num">${i + 1}</div>
+        <div class="warmup-item-body">
+          <div class="warmup-item-name">${a.name}</div>
+          <div class="warmup-item-cue">${a.cue}</div>
+        </div>
+        <div class="warmup-item-dur">${a.duration}<span class="warmup-item-unit">min</span></div>
+      </div>`).join('');
+
+    document.getElementById('warmup-content').innerHTML = `
+      <div class="warmup-hd">
+        <div class="warmup-hd-icon">🔥</div>
+        <div>
+          <div class="warmup-hd-title">Today's Warm-Up</div>
+          <div class="warmup-hd-meta">${total} min · ${activities.length} activities · ${t.label}</div>
+        </div>
+      </div>
+      <div class="warmup-list">${rows}</div>`;
+
+    document.getElementById('modal-warmup').classList.remove('hidden');
+  }
+
+  function closeWarmup(e) {
+    if (!e || e.target === document.getElementById('modal-warmup')) {
+      document.getElementById('modal-warmup').classList.add('hidden');
+    }
+  }
+
   /* ---- Settings modal ---- */
   function showSettings() {
     const modal = document.getElementById('modal-settings');
     const info  = document.getElementById('settings-info');
 
     if (state.profile) {
-      const t    = TIERS[state.profile.tier];
-      const weak = SKILL_LABELS[state.profile.weakSkill] || 'General';
-      const date = new Date(state.profile.createdAt).toLocaleDateString();
+      const t          = TIERS[state.profile.tier];
+      const weakSkills = state.profile.weakSkills || [state.profile.weakSkill || 'dinking'];
+      const weak       = weakSkills.map(s => SKILL_LABELS[s] || s).join(', ') || 'General';
+      const date       = new Date(state.profile.createdAt).toLocaleDateString();
       info.innerHTML = `
         <strong>${t.emoji} ${t.label} Player</strong><br>
         Focus area: ${weak}<br>
@@ -1163,6 +1357,8 @@ const App = (() => {
     if (ds) ds.disabled = true;
     document.querySelectorAll('#dupr-chips .chip').forEach(c => c.classList.remove('active'));
 
+    state.pendingSessionEntry = null;
+    document.getElementById('modal-rating').classList.add('hidden');
     document.getElementById('modal-settings').classList.add('hidden');
 
     // Update welcome buttons
@@ -1178,7 +1374,12 @@ const App = (() => {
   function loadProfile() {
     try {
       const raw = localStorage.getItem('picklepro_profile');
-      if (raw) state.profile = JSON.parse(raw);
+      if (raw) {
+        state.profile = JSON.parse(raw);
+        if (state.profile && !state.profile.weakSkills) {
+          state.profile.weakSkills = [state.profile.weakSkill || 'dinking'];
+        }
+      }
     } catch (e) {
       localStorage.removeItem('picklepro_profile');
     }
@@ -1213,6 +1414,8 @@ const App = (() => {
     quizSubmit,
     enterApp,
     navigate,
+    showWarmup,
+    closeWarmup,
     showSettings,
     closeSettings,
     confirmReset,
@@ -1223,6 +1426,8 @@ const App = (() => {
     startSession,
     toggleDrill,
     endSession,
+    submitRating,
+    skipRating,
     switchTrackerTab,
     onFindSearch,
     clearFind,
